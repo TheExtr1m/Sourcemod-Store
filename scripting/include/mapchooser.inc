@@ -1,34 +1,3 @@
-/**
- * vim: set ts=4 :
- * =============================================================================
- * SourceMod (C)2004-2014 AlliedModders LLC.  All rights reserved.
- * =============================================================================
- *
- * This file is part of the SourceMod/SourcePawn SDK.
- *
- * This program is free software; you can redistribute it and/or modify it under
- * the terms of the GNU General Public License, version 3.0, as published by the
- * Free Software Foundation.
- * 
- * This program is distributed in the hope that it will be useful, but WITHOUT
- * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
- * FOR A PARTICULAR PURPOSE.  See the GNU General Public License for more
- * details.
- *
- * You should have received a copy of the GNU General Public License along with
- * this program.  If not, see <http://www.gnu.org/licenses/>.
- *
- * As a special exception, AlliedModders LLC gives you permission to link the
- * code of this program (as well as its derivative works) to "Half-Life 2," the
- * "Source Engine," the "SourcePawn JIT," and any Game MODs that run on software
- * by the Valve Corporation.  You must obey the GNU General Public License in
- * all respects for all other code used.  Additionally, AlliedModders LLC grants
- * this exception to all derivative works.  AlliedModders LLC defines further
- * exceptions, found in LICENSE.txt (as of this writing, version JULY-31-2007),
- * or <http://www.sourcemod.net/license.php>.
- *
- * Version: $Id$
- */
 #if defined _mapchooser_included_
   #endinput
 #endif
@@ -58,7 +27,7 @@ enum MapChange
  * @param owner		Client index of the nominater. If the client disconnects the nomination will be removed. Use 0 for constant nominations
  * @return			Nominate Result of the outcome
  */
-native NominateResult NominateMap(const char[] map, bool force, int owner);
+native NominateResult:NominateMap(const String:map[], bool:force, owner);
 
 /**
  * Attempt to remove a map from the mapchooser map list.
@@ -66,7 +35,7 @@ native NominateResult NominateMap(const char[] map, bool force, int owner);
  * @param map		Map to remove.
  * @return			True if the nomination was found and removed, or false if the nomination was not found.
  */
-native bool RemoveNominationByMap(const char[] map);
+native bool:RemoveNominationByMap(const String:map[]);
 
 /**
  * Attempt to remove a map from the mapchooser map list.
@@ -74,7 +43,7 @@ native bool RemoveNominationByMap(const char[] map);
  * @param owner		Client index of the nominater.
  * @return			True if the nomination was found and removed, or false if the nomination was not found.
  */
-native bool RemoveNominationByOwner(int owner);
+native bool:RemoveNominationByOwner(owner);
 
 /**
  * Gets the current list of excluded maps.
@@ -82,7 +51,7 @@ native bool RemoveNominationByOwner(int owner);
  * @param array		An ADT array handle to add the map strings to.
  * @noreturn
  */
-native void GetExcludeMapList(ArrayList array);
+native GetExcludeMapList(Handle:array);
 
 /**
  * Gets the current list of nominated maps.
@@ -91,14 +60,14 @@ native void GetExcludeMapList(ArrayList array);
  * @param ownerarray	An optional ADT array handle to add the nominator client indexes to.
  * @noreturn
  */
-native void GetNominatedMapList(ArrayList maparray, ArrayList ownerarray = null);
+native GetNominatedMapList(Handle:maparray, Handle:ownerarray = INVALID_HANDLE);
 
 /**
  * Checks if MapChooser will allow a vote
  *
  * @return			True if a vote can be held, or false if mapchooser is already holding a vote.
  */
-native bool CanMapChooserStartVote();
+native bool:CanMapChooserStartVote();
 
 /**
  * Initiates a MapChooser map vote
@@ -109,21 +78,21 @@ native bool CanMapChooserStartVote();
  * @param when			MapChange consant of when the resulting mapchange should occur.
  * @param inputarray	ADT array list of maps to add to the vote.
  */
-native void InitiateMapChooserVote(MapChange when, ArrayList inputarray=null);
+native InitiateMapChooserVote(MapChange:when, Handle:inputarray=INVALID_HANDLE);
 
 /**
  * Checks if MapChooser's end of map vote has completed.
  *
  * @return			True if complete, false otherwise.
  */
-native bool HasEndOfMapVoteFinished();
+native bool:HasEndOfMapVoteFinished();
 
 /**
  * Checks if MapChooser is set to run an end of map vote.
  *
  * @return			True if enabled, false otherwise.
  */
-native bool EndOfMapVoteEnabled();
+native bool:EndOfMapVoteEnabled();
 
 /**
  * Called when mapchooser removes a nomination from its list.
@@ -136,7 +105,8 @@ forward void OnNominationRemoved(const char[] map, int owner);
  */
 forward void OnMapVoteStarted();
 
-public SharedPlugin __pl_mapchooser = 
+
+public SharedPlugin:__pl_mapchooser = 
 {
 	name = "mapchooser",
 	file = "mapchooser.smx",
@@ -147,7 +117,7 @@ public SharedPlugin __pl_mapchooser =
 #endif
 };
 
-public void __pl_mapchooser_SetNTVOptional()
+public __pl_mapchooser_SetNTVOptional()
 {
 	MarkNativeAsOptional("NominateMap");
 	MarkNativeAsOptional("RemoveNominationByMap");

@@ -153,9 +153,8 @@ enum TFCond
 	TFCond_HalloweenTiny,
 	TFCond_HalloweenInHell,
 	TFCond_HalloweenGhostMode,
-	TFCond_MiniCritOnKill,
-	TFCond_DodgeChance, //79
-	TFCond_ObscuredSmoke = 79,
+
+	TFCond_DodgeChance = 79,
 	TFCond_Parachute,
 	TFCond_BlastJumping,
 	TFCond_HalloweenKart,
@@ -163,8 +162,7 @@ enum TFCond
 	TFCond_BalloonHead,
 	TFCond_MeleeOnly,
 	TFCond_SwimmingCurse,
-	TFCond_HalloweenKartNoTurn, //87
-	TFCond_FreezeInput = 87,
+	TFCond_HalloweenKartNoTurn,
 	TFCond_HalloweenKartCage,
 	TFCond_HasRune,
 	TFCond_RuneStrength,
@@ -175,16 +173,6 @@ enum TFCond
 	TFCond_RuneWarlock,
 	TFCond_RunePrecision, // 96
 	TFCond_RuneAgility,
-	TFCond_GrapplingHook,
-	TFCond_GrapplingHookSafeFall,
-	TFCond_GrapplingHookLatched,
-	TFCond_GrapplingHookBleeding,
-	TFCond_AfterburnImmune,
-	TFCond_RuneKnockout,
-	TFCond_RuneImbalance,
-	TFCond_CritRuneTemp,
-	TFCond_PasstimeInterception,
-	TFCond_SwimmingNoEffects,
 };
 
 const Float:TFCondDuration_Infinite = -1.0;
@@ -198,7 +186,6 @@ public const TFHoliday:TFHoliday_Birthday;
 public const TFHoliday:TFHoliday_Halloween;
 public const TFHoliday:TFHoliday_Christmas;
 public const TFHoliday:TFHoliday_EndOfTheLine;
-public const TFHoliday:TFHoliday_CommunityUpdate;
 public const TFHoliday:TFHoliday_ValentinesDay;
 public const TFHoliday:TFHoliday_MeetThePyro;
 public const TFHoliday:TFHoliday_SpyVsEngyWar;

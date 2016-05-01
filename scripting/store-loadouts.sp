@@ -1,17 +1,13 @@
 #pragma semicolon 1
 
 #include <sourcemod>
-#include <multicolors>
-#include <store/store-stocks>
+#include <clientprefs>
+#include <store>
 
 #undef REQUIRE_EXTENSIONS
 #include <tf2_stocks>
 
-//Store Includes
-#include <store/store-core>
-#include <store/store-loadouts>
-#include <store/store-logging>
-
+//New Syntax
 #pragma newdecls required
 
 #define PLUGIN_NAME "[Store] Loadouts Module"
@@ -19,31 +15,38 @@
 #define PLUGIN_VERSION_CONVAR "store_loadouts_version"
 
 //Config Globals
-stock int g_maxLoadouts;
-int g_itemMenuOrder;
+
+char TF2_ClassName[TFClassType][] = {"", "scout", "sniper", "soldier", "demoman", "medic", "heavy", "pyro", "spy", "engineer" };
 
 Handle g_clientLoadoutChangedForward;
-char g_game[STORE_MAX_LOADOUTGAME_LENGTH];
-int g_clientLoadout[MAXPLAYERS + 1];
 
-public Plugin myinfo = 
+char g_game[STORE_MAX_LOADOUTGAME_LENGTH];
+
+int g_clientLoadout[MAXPLAYERS+1];
+Handle g_lastClientLoadout;
+
+bool g_databaseInitialized;
+
+public Plugin myinfo =
 {
-	name = PLUGIN_NAME, 
-	author = STORE_AUTHORS, 
-	description = PLUGIN_DESCRIPTION, 
-	version = STORE_VERSION, 
+	name = PLUGIN_NAME,
+	author = STORE_AUTHORS,
+	description = PLUGIN_DESCRIPTION,
+	version = STORE_VERSION,
 	url = STORE_URL
 };
 
 public APLRes AskPluginLoad2(Handle myself, bool late, char[] error, int err_max)
 {
 	CreateNative("Store_OpenLoadoutMenu", Native_OpenLoadoutMenu);
+	CreateNative("Store_GetClientCurrentLoadout", Native_GetClientLoadout);
 	CreateNative("Store_GetClientLoadout", Native_GetClientLoadout);
-	CreateNative("Store_SetClientLoadout", Native_SetClientLoadout);
 	
 	g_clientLoadoutChangedForward = CreateGlobalForward("Store_OnClientLoadoutChanged", ET_Event, Param_Cell);
 	
+	RegPluginLibrary("store-loadout");
 	RegPluginLibrary("store-loadouts");
+	
 	return APLRes_Success;
 }
 
@@ -52,49 +55,65 @@ public void OnPluginStart()
 	LoadTranslations("common.phrases");
 	LoadTranslations("store.phrases");
 	
-	CreateConVar(PLUGIN_VERSION_CONVAR, STORE_VERSION, PLUGIN_NAME, FCVAR_REPLICATED | FCVAR_SPONLY | FCVAR_DONTRECORD);
+	CreateConVar(PLUGIN_VERSION_CONVAR, STORE_VERSION, PLUGIN_NAME, FCVAR_REPLICATED|FCVAR_NOTIFY|FCVAR_PLUGIN|FCVAR_SPONLY|FCVAR_DONTRECORD);
+	
+	g_lastClientLoadout = RegClientCookie("lastClientLoadout", "Client loadout", CookieAccess_Protected);
 	
 	GetGameFolderName(g_game, sizeof(g_game));
 	
 	HookEvent("player_spawn", Event_PlayerSpawn);
 	
-	AddCommandListener(OnMOTDClose, "closed_htmlpage");
-	
-	LoadConfig("Loadouts", "configs/store/loadout.cfg");
+	LoadConfig();
+}
+
+public void Store_OnCoreLoaded()
+{
+	Store_AddMainMenuItem("Loadout", "Loadout Description", _, OnMainMenuLoadoutClick, 10);
+}
+
+public void OnMapStart()
+{
+	if (g_databaseInitialized)
+	{
+		Store_GetLoadouts(INVALID_HANDLE, INVALID_FUNCTION, false);
+	}
 }
 
 public void Store_OnDatabaseInitialized()
 {
+	g_databaseInitialized = true;
 	Store_GetLoadouts(INVALID_HANDLE, INVALID_FUNCTION, false);
 	
 	Store_RegisterPluginModule(PLUGIN_NAME, PLUGIN_DESCRIPTION, PLUGIN_VERSION_CONVAR, STORE_VERSION);
 }
 
-void LoadConfig(const char[] sName, const char[] sFile)
+public void OnClientCookiesCached(int client)
 {
-	Handle hKV = CreateKeyValues(sName);
+	char buffer[12];
+	GetClientCookie(client, g_lastClientLoadout, buffer, sizeof(buffer));
+	g_clientLoadout[client] = StringToInt(buffer);
+}
+
+void LoadConfig() 
+{
+	Handle kv = CreateKeyValues("root");
 	
-	char sPath[PLATFORM_MAX_PATH];
-	BuildPath(Path_SM, sPath, sizeof(sPath), sFile);
+	char path[PLATFORM_MAX_PATH];
+	BuildPath(Path_SM, path, sizeof(path), "configs/store/loadout.cfg");
 	
-	if (!FileToKeyValues(hKV, sPath))
+	if (!FileToKeyValues(kv, path)) 
 	{
-		CloseHandle(hKV);
-		SetFailState("Can't read config file %s", sPath);
+		CloseHandle(kv);
+		SetFailState("Can't read config file %s", path);
 	}
-	
+
 	char menuCommands[255];
-	KvGetString(hKV, "loadout_commands", menuCommands, sizeof(menuCommands), "!loadout /loadout");
+	KvGetString(kv, "loadout_commands", menuCommands, sizeof(menuCommands));
 	Store_RegisterChatCommands(menuCommands, ChatCommand_OpenLoadout);
 	
-	g_maxLoadouts = KvGetNum(hKV, "loadouts_amount", 3);
-	g_itemMenuOrder = KvGetNum(hKV, "menu_item_order", 10);
+	CloseHandle(kv);
 	
-	CloseHandle(hKV);
-	
-	Store_AddMainMenuItem("Loadout", "Loadout Description", _, OnMainMenuLoadoutClick, g_itemMenuOrder);
-	
-	Store_LogInformational("Store Config '%s' Loaded: %s", sName, sFile);
+	Store_AddMainMenuItem("Loadout", "Loadout Description", _, OnMainMenuLoadoutClick, 10);
 }
 
 public void ChatCommand_OpenLoadout(int client)
@@ -107,188 +126,87 @@ public void OnMainMenuLoadoutClick(int client, const char[] value)
 	OpenLoadoutMenu(client);
 }
 
-public Action OnMOTDClose(int client, const char[] command, int argc)
-{
-	Store_QueryEquippedLoadout(GetSteamAccountID(client), OnReceiveClientLoadout, GetClientUserId(client));
-}
-
-public void OnReceiveClientLoadout(int accountId, int id, any data)
-{
-	int client = GetClientOfUserId(data);
-	
-	g_clientLoadout[client] = id;
-}
-
 public void Event_PlayerSpawn(Handle event, const char[] name, bool dontBroadcast)
 {
 	int client = GetClientOfUserId(GetEventInt(event, "userid"));
 	
-	if (IsFakeClient(client))
-	{
-		return;
-	}
-	
 	if (g_clientLoadout[client] == 0 || !IsLoadoutAvailableFor(client, g_clientLoadout[client]))
 	{
-		Store_GetClientLoadouts(GetSteamAccountID(client), OnFindOptimalLoadout, GetClientUserId(client));
-		//RetrieveFirstLoadout(client);
+		FindOptimalLoadoutFor(client);
 	}
 }
 
 void OpenLoadoutMenu(int client)
 {
-	char sToken[MAX_TOKEN_SIZE];
-	Store_GetClientToken(client, sToken, sizeof(sToken));
+	Handle filter = CreateTrie();
+	SetTrieString(filter, "game", g_game);
+	SetTrieValue(filter, "team", GetClientTeam(client));
 	
-	Handle hMenu = CreateMenu(MenuHandle_OpenLoadoutsMenu);
-	SetMenuTitle(hMenu, "%T%T\n \n", "Store Menu Title", client, "Store Menu Loadouts Menu", client);
+	if (StrEqual(g_game, "tf"))
+	{
+		char className[10];
+		TF2_GetClassName(TF2_GetPlayerClass(client), className, sizeof(className));
+		SetTrieString(filter, "class", className);
+	}
 	
-	AddMenuItem(hMenu, "Global", "Global Loadout Listings");
-	AddMenuItem(hMenu, "Subscribed", "List Subscribed Loadouts");
-	AddMenuItem(hMenu, "", "", ITEMDRAW_SPACER);
-	AddMenuItem(hMenu, "Generate", "Generate a new Token");
-	AddMenuItemFormat(hMenu, "", ITEMDRAW_DISABLED, "Current Token:\n%s", sToken);
-	
-	SetMenuExitBackButton(hMenu, true);
-	DisplayMenu(hMenu, client, MENU_TIME_FOREVER);
+	Store_GetLoadouts(filter, GetLoadoutsCallback, true, client);
 }
 
-public int MenuHandle_OpenLoadoutsMenu(Handle menu, MenuAction action, int client, int slot)
+public void GetLoadoutsCallback(int[] ids, int count, any client)
+{
+	Handle menu = CreateMenu(LoadoutMenuSelectHandle);
+	SetMenuTitle(menu, "Loadout\n \n");
+		
+	for (int loadout = 0; loadout < count; loadout++)
+	{
+		char displayName[STORE_MAX_DISPLAY_NAME_LENGTH];
+		Store_GetLoadoutDisplayName(ids[loadout], displayName, sizeof(displayName));
+		
+		char itemText[sizeof(displayName) + 3];
+		
+		if (g_clientLoadout[client] == ids[loadout])
+		{
+			strcopy(itemText, sizeof(itemText), "[L] ");
+		}
+		
+		Format(itemText, sizeof(itemText), "%s%s", itemText, displayName);
+		
+		char itemValue[8];
+		IntToString(ids[loadout], itemValue, sizeof(itemValue));
+		
+		AddMenuItem(menu, itemValue, itemText);
+	}
+	
+	SetMenuExitBackButton(menu, true);
+	DisplayMenu(menu, client, 0);
+}
+
+public int LoadoutMenuSelectHandle(Handle menu, MenuAction action, int client, int slot)
 {
 	switch (action)
 	{
 		case MenuAction_Select:
-		{
-			char sMenuItem[64];
-			GetMenuItem(menu, slot, sMenuItem, sizeof(sMenuItem));
-			
-			Store_AccessType aquire = Access_Menus/*Store_GetGlobalAccessType() != Access_Both ? Store_GetGlobalAccessType() : Store_GetGlobalAccessType()*/;
-			
-			if (StrEqual(sMenuItem, "Global"))
 			{
-				ListGlobalLoadouts(client, aquire);
-			}
-			else if (StrEqual(sMenuItem, "Subscribed"))
-			{
-				OpenSubscriptions(client, aquire);
-			}
-			else if (StrEqual(sMenuItem, "Generate"))
-			{
-				Store_GenerateNewToken(client);
+				char sMenuItem[64];
+				GetMenuItem(menu, slot, sMenuItem, sizeof(sMenuItem));
+				
+				g_clientLoadout[client] = StringToInt(sMenuItem);			
+				SetClientCookie(client, g_lastClientLoadout, sMenuItem);
+				
+				Call_StartForward(g_clientLoadoutChangedForward);
+				Call_PushCell(client);
+				Call_Finish();
+				
 				OpenLoadoutMenu(client);
 			}
-		}
 		case MenuAction_Cancel:
-		{
-			if (slot == MenuCancel_ExitBack)
 			{
-				Store_OpenMainMenu(client);
+				if (slot == MenuCancel_ExitBack)
+				{
+					Store_OpenMainMenu(client);
+				}
 			}
-		}
-		case MenuAction_End:CloseHandle(menu);
-	}
-}
-
-void ListGlobalLoadouts(int client, Store_AccessType access)
-{
-	switch (access)
-	{
-		case Access_Menus:
-		{
-			/*
-			Handle filter = CreateTrie();
-			SetTrieString(filter, "game", g_game);
-			SetTrieValue(filter, "team", GetClientTeam(client));
-			
-			if (StrEqual(g_game, "tf"))
-			{
-				char className[10];
-				TF2_GetClassName(TF2_GetPlayerClass(client), className, sizeof(className));
-				SetTrieString(filter, "class", className);
-			}
-			
-			Store_GetLoadouts(filter, OnGetGlobalLoadouts, true, GetClientUserId(client));
-			*/
-			Store_GetClientLoadouts(GetSteamAccountID(client), OnListAllLoadouts, GetClientUserId(client));
-		}
-		case Access_MOTDs:
-		{
-			DisplaySubscriptionsMOTD(client);
-		}
-	}
-}
-
-public void OnListAllLoadouts(int accountId, int[] ids, int count, any data)
-{
-	int client = GetClientOfUserId(data);
-	
-	if (client < 1 || count <= 0)
-	{
-		return;
-	}
-	
-	Handle hMenu = CreateMenu(MenuHandle_DisplayGlobalLoadouts);
-	SetMenuTitle(hMenu, "Your Loadouts for %s:", g_game);
-	
-	for (int i = 0; i < count; i++)
-	{
-		char displayName[32];
-		Store_GetLoadoutDisplayName(ids[i], displayName, sizeof(displayName));
-		
-		char sID[32];
-		IntToString(i, sID, sizeof(sID));
-		
-		AddMenuItem(hMenu, sID, displayName);
-	}
-	
-	DisplayMenu(hMenu, client, MENU_TIME_FOREVER);
-}
-
-public void OnGetGlobalLoadouts(int[] ids, int count, any data)
-{
-	int client = GetClientOfUserId(data);
-	
-	if (client < 1)
-	{
-		return;
-	}
-	
-	Handle hMenu = CreateMenu(MenuHandle_DisplayGlobalLoadouts);
-	SetMenuTitle(hMenu, "Global Public Loadouts for %s:", g_game);
-	
-	for (int i = 0; i < count; i++)
-	{
-		char displayName[32];
-		Store_GetLoadoutDisplayName(ids[i], displayName, sizeof(displayName));
-		
-		char sID[32];
-		IntToString(i, sID, sizeof(sID));
-		
-		AddMenuItem(hMenu, sID, displayName);
-	}
-	
-	DisplayMenu(hMenu, client, MENU_TIME_FOREVER);
-}
-
-public int MenuHandle_DisplayGlobalLoadouts(Handle menu, MenuAction action, int client, int slot)
-{
-	switch (action)
-	{
-		case MenuAction_Select:
-		{
-			char sMenuItem[64];
-			GetMenuItem(menu, slot, sMenuItem, sizeof(sMenuItem));
-			
-			
-		}
-		case MenuAction_Cancel:
-		{
-			if (slot == MenuCancel_ExitBack)
-			{
-				OpenLoadoutMenu(client);
-			}
-		}
-		case MenuAction_End:CloseHandle(menu);
+		case MenuAction_End: CloseHandle(menu);
 	}
 }
 
@@ -297,7 +215,7 @@ bool IsLoadoutAvailableFor(int client, int loadout)
 	char game[STORE_MAX_LOADOUTGAME_LENGTH];
 	Store_GetLoadoutGame(loadout, game, sizeof(game));
 	
-	if (strlen(game) == 0 || !StrEqual(game, g_game))
+	if (strlen(game) == 0 && !StrEqual(game, g_game))
 	{
 		return false;
 	}
@@ -321,13 +239,17 @@ bool IsLoadoutAvailableFor(int client, int loadout)
 	{
 		return false;
 	}
-	
+		
 	return true;
 }
 
-/*
-void RetrieveFirstLoadout(int client)
+void FindOptimalLoadoutFor(int client)
 {
+	if (!g_databaseInitialized)
+	{
+		return;
+	}
+	
 	Handle filter = CreateTrie();
 	SetTrieString(filter, "game", g_game);
 	SetTrieValue(filter, "team", GetClientTeam(client));
@@ -339,147 +261,48 @@ void RetrieveFirstLoadout(int client)
 		SetTrieString(filter, "class", className);
 	}
 	
-	Store_GetClientLoadouts(GetSteamAccountID(client), OnFindOptimalLoadout, GetClientUserId(client));
+	Store_GetLoadouts(filter, FindOptimalLoadoutCallback, true, GetClientUserId(client));
 }
-*/
-public void OnFindOptimalLoadout(int accountId, int[] ids, int count, any data)
+
+public void FindOptimalLoadoutCallback(int[] ids, int count, any data)
 {
 	int client = GetClientOfUserId(data);
 	
-	if (client != 0 && count > 0)
+	if (!client)
 	{
-		SaveEquippedLoadout(client, ids[0]);
+		return;
 	}
+	
+	if (count > 0)
+	{
+		g_clientLoadout[client] = ids[0];
+		
+		char buffer[12];
+		IntToString(g_clientLoadout[client], buffer, sizeof(buffer));
+		
+		SetClientCookie(client, g_lastClientLoadout, buffer);
+		
+		Call_StartForward(g_clientLoadoutChangedForward);
+		Call_PushCell(client);
+		Call_Finish();
+	}
+	else
+	{
+		Store_LogWarning("No loadout found.");
+	}	
 }
 
 public int Native_OpenLoadoutMenu(Handle plugin, int params)
-{
+{       
 	OpenLoadoutMenu(GetNativeCell(1));
 }
 
 public int Native_GetClientLoadout(Handle plugin, int params)
-{
+{       
 	return g_clientLoadout[GetNativeCell(1)];
-}
-
-public int Native_SetClientLoadout(Handle plugin, int params)
-{
-	g_clientLoadout[GetNativeCell(1)] = GetNativeCell(2);
 }
 
 void TF2_GetClassName(TFClassType classType, char[] buffer, int maxlength)
 {
-	char TF2_ClassName[TFClassType][] =  { "", "scout", "sniper", "soldier", "demoman", "medic", "heavy", "pyro", "spy", "engineer" };
 	strcopy(buffer, maxlength, TF2_ClassName[classType]);
 }
-
-void OpenSubscriptions(int client, Store_AccessType access)
-{
-	switch (access)
-	{
-		case Access_Menus:DisplaySubscriptionsMenu(client);
-		case Access_MOTDs:DisplaySubscriptionsMOTD(client);
-	}
-}
-
-void DisplaySubscriptionsMenu(int client)
-{
-	Store_GetClientLoadouts(GetSteamAccountID(client), GetLoadoutsCallback, client);
-}
-
-public void GetLoadoutsCallback(int accountId, int[] ids, int count, any client)
-{
-	Handle menu = CreateMenu(LoadoutMenuSelectHandle);
-	SetMenuTitle(menu, "Loadout\n \n");
-	
-	for (int i = 0; i < count; i++)
-	{
-		char displayName[STORE_MAX_DISPLAY_NAME_LENGTH];
-		Store_GetLoadoutDisplayName(ids[i], displayName, sizeof(displayName));
-		
-		char itemText[sizeof(displayName) + 3];
-		
-		if (g_clientLoadout[client] == ids[i])
-		{
-			strcopy(itemText, sizeof(itemText), "[E] ");
-		}
-		
-		Format(itemText, sizeof(itemText), "%s%s", itemText, displayName);
-		
-		char itemValue[8];
-		IntToString(ids[i], itemValue, sizeof(itemValue));
-		
-		AddMenuItem(menu, itemValue, itemText);
-	}
-	
-	if (count <= 0)
-	{
-		AddMenuItemFormat(menu, "", ITEMDRAW_DISABLED, "You aren't currently subscribed or own any loadouts at this time, better get to it!"); //Translate
-	}
-	
-	SetMenuExitBackButton(menu, true);
-	DisplayMenu(menu, client, MENU_TIME_FOREVER);
-}
-
-public int LoadoutMenuSelectHandle(Handle menu, MenuAction action, int client, int slot)
-{
-	switch (action)
-	{
-		case MenuAction_Select:
-		{
-			char sMenuItem[64];
-			GetMenuItem(menu, slot, sMenuItem, sizeof(sMenuItem));
-			
-			SaveEquippedLoadout(client, StringToInt(sMenuItem));
-			
-			Store_AccessType aquire = Access_Menus/*Store_GetGlobalAccessType() != Access_Both ? Store_GetGlobalAccessType() : Store_GetGlobalAccessType()*/;
-			
-			OpenSubscriptions(client, aquire);
-		}
-		case MenuAction_Cancel:
-		{
-			if (slot == MenuCancel_ExitBack)
-			{
-				OpenLoadoutMenu(client);
-			}
-		}
-		case MenuAction_End:CloseHandle(menu);
-	}
-}
-
-void DisplaySubscriptionsMOTD(int client)
-{
-	char sURL[256];
-	Store_GetStoreBaseURL(sURL, sizeof(sURL));
-	
-	char sToken[MAX_TOKEN_SIZE];
-	Store_GetClientToken(client, sToken, sizeof(sToken));
-	
-	char sEngine[64];
-	GetGameFolderName(sEngine, sizeof(sEngine));
-	
-	Format(sURL, sizeof(sURL), "%s%s?token=%s&?game=%s&userid=%i&page=%s", sURL, POSTURL, sToken, sEngine, Store_GetClientUserID(client), STORE_POSTURL_LOADOUTS);
-	Store_OpenMOTDWindow(client, "Store Loadouts Interface", sURL);
-}
-
-bool SaveEquippedLoadout(int client, int id)
-{
-	Store_SaveEquippedLoadout(GetSteamAccountID(client), id, OnSaveClientLoadoutID, GetClientUserId(client));
-}
-
-public void OnSaveClientLoadoutID(int accountId, int id, any data)
-{
-	int client = GetClientOfUserId(data);
-	
-	g_clientLoadout[client] = id;
-	
-	Call_StartForward(g_clientLoadoutChangedForward);
-	Call_PushCell(client);
-	Call_PushCell(id);
-	Call_Finish();
-	
-	char sLoadoutName[STORE_MAX_LOADOUTNAME_LENGTH];
-	Store_GetLoadoutDisplayName(id, sLoadoutName, sizeof(sLoadoutName));
-	
-	CPrintToChat(client, "You have successfully equipped loadout %s! [Loadout ID: %i]", sLoadoutName, id); //Translate
-} 

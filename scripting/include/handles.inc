@@ -75,7 +75,14 @@ native CloseHandle(Handle:hndl);
  */
 native Handle:CloneHandle(Handle:hndl, Handle:plugin=INVALID_HANDLE);
 
-using __intrinsics__.Handle;
+/**
+ * Helper for object-oriented syntax.
+ */
+methodmap Handle __nullable__
+{
+	public Close() = CloseHandle;
+	public ~Handle() = CloseHandle;
+}
 
 /**
  * Do not use this function.  Returns if a Handle and its contents 
