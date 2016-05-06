@@ -82,7 +82,7 @@ void LoadConfig()
 	}
 
 	g_timeInSeconds = KvGetFloat(kv, "time_per_distribute", 180.0);
-	g_enableMessagePerTick = view_as<bool>KvGetNum(kv, "enable_message_per_distribute", 1);
+	g_enableMessagePerTick = KvGetBool(kv, "enable_message_per_distribute", true);
 
 	if (KvJumpToKey(kv, "distribution"))
 	{
@@ -194,7 +194,7 @@ bool HasPermission(int client, int flags)
 		{
 			count++;
 
-			if (GetAdminFlag(admin, view_as<AdminFlag>i))
+			if (GetAdminFlag(admin, view_as<AdminFlag>(i)))
 			{
 				found++;
 			}

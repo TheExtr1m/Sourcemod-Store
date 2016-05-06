@@ -107,7 +107,7 @@ void LoadConfig()
 		SetFailState("Can't read config file %s", path);
 	}
 	
-	g_showItemsMenuDescriptions = view_as<bool>KvGetNum(kv, "show_items_menu_descriptions", 1);
+	g_showItemsMenuDescriptions = KvGetBool(kv, "show_items_menu_descriptions", true);
 	
 	char creditChoicesString[255];
 	KvGetString(kv, "credits_choices", creditChoicesString, sizeof(creditChoicesString));
@@ -120,7 +120,7 @@ void LoadConfig()
 		g_creditChoices[choice] = StringToInt(creditChoices[choice]);
 	}
 	
-	g_drop_enabled = view_as<bool>KvGetNum(kv, "drop_enabled", 0);
+	g_drop_enabled = KvGetBool(kv, "drop_enabled", false);
 
 	if (g_drop_enabled)
 	{
@@ -583,7 +583,7 @@ public void GetCreditsCallback(int credits, any hPack)
 	ResetPack(hPack);
 
 	int client = GetClientOfUserId(ReadPackCell(hPack));
-	GiftAction giftAction = view_as<GiftAction>ReadPackCell(hPack);
+	GiftAction giftAction = view_as<GiftAction>(ReadPackCell(hPack));
 	int giftTo = ReadPackCell(hPack);
 	int giftCredits = ReadPackCell(hPack);
 
@@ -641,7 +641,7 @@ public int CreditsConfirmMenuSelectItem(Handle menu, MenuAction action, int clie
 				char values[3][16];
 				ExplodeString(sMenuItem, ",", values, sizeof(values), sizeof(values[]));
 
-				GiftAction giftAction = view_as<GiftAction>StringToInt(values[0]);
+				GiftAction giftAction = view_as<GiftAction>(StringToInt(values[0]));
 				int giftTo = StringToInt(values[1]);
 				int credits = StringToInt(values[2]);
 				
@@ -700,7 +700,7 @@ public void GetUserItemsCallback(int[] ids, bool[] equipped, int[] itemCount, in
 	ResetPack(hPack);
 	
 	int client = GetClientOfUserId(ReadPackCell(hPack));
-	GiftAction giftAction = view_as<GiftAction>ReadPackCell(hPack);
+	GiftAction giftAction = view_as<GiftAction>(ReadPackCell(hPack));
 	int giftTo = ReadPackCell(hPack);
 	
 	CloseHandle(hPack);
@@ -770,7 +770,7 @@ void OpenGiveItemConfirmMenu(int client, const char[] sValue)
 	char sValues[3][16];
 	ExplodeString(sValue, ",", sValues, sizeof(sValues), sizeof(sValues[]));
 
-	GiftAction giftAction = view_as<GiftAction>StringToInt(sValues[0]);
+	GiftAction giftAction = view_as<GiftAction>(StringToInt(sValues[0]));
 	int giftTo = StringToInt(sValues[1]);
 	int itemId = StringToInt(sValues[2]);
 
@@ -808,7 +808,7 @@ public int ItemConfirmMenuSelectItem(Handle menu, MenuAction action, int client,
 				char values[3][16];
 				ExplodeString(sMenuItem, ",", values, sizeof(values), sizeof(values[]));
 
-				GiftAction giftAction = view_as<GiftAction>StringToInt(values[0]);
+				GiftAction giftAction = view_as<GiftAction>(StringToInt(values[0]));
 				int giftTo = StringToInt(values[1]);
 				int itemId = StringToInt(values[2]);
 				

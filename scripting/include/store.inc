@@ -9,6 +9,7 @@
 #include <store/store-shop>
 #include <store/store-loadouts>
 #include <store/store-logging>
+#include <store/store-stocks>
 
 //External Includes
 #include <multicolors>
@@ -19,6 +20,6 @@
 
 #define STORE_AUTHORS "Alongub, Keith Warren(Drixevel), Arrow768"
 #define STORE_URL "https://github.com/SourceMod-Store/store"
-#define STORE_VERSION "1.2 Final"
+#define STORE_VERSION "1.2.6"
 
 #define STORE_PREFIX "\x04[Store] \x01"

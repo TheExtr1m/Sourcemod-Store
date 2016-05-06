@@ -90,11 +90,11 @@ void LoadConfig()
 	KvGetString(kv, "shop_commands", menuCommands, sizeof(menuCommands), "!shop /shop");
 	Store_RegisterChatCommands(menuCommands, ChatCommand_OpenShop);
 
-	g_confirmItemPurchase = view_as<bool>KvGetNum(kv, "confirm_item_purchase", 0);
-	g_hideEmptyCategories = view_as<bool>KvGetNum(kv, "hide_empty_categories", 0);
-	g_showCategoryDescriptions = view_as<bool>KvGetNum(kv, "show_category_descriptions", 1);
-	g_allowBuyingDuplicates = view_as<bool>KvGetNum(kv, "allow_buying_duplicates", 0);
-	g_equipAfterPurchase = view_as<bool>KvGetNum(kv, "equip_after_purchase", 1);
+	g_confirmItemPurchase = KvGetBool(kv, "confirm_item_purchase", false);
+	g_hideEmptyCategories = KvGetBool(kv, "hide_empty_categories", false);
+	g_showCategoryDescriptions = KvGetBool(kv, "show_category_descriptions", true);
+	g_allowBuyingDuplicates = KvGetBool(kv, "allow_buying_duplicates", false);
+	g_equipAfterPurchase = KvGetBool(kv, "equip_after_purchase", true);
 	
 	if (KvJumpToKey(kv, "Menu Sorting"))
 	{

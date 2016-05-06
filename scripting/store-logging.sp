@@ -116,26 +116,26 @@ void LoadConfig()
 	
 	if (KvJumpToKey(hKV, "Logging_types"))
 	{
-		bLog_Default = view_as<bool>KvGetNum(hKV, "default", 1);
-		bLog_Trace = view_as<bool>KvGetNum(hKV, "trace", 1);
-		bLog_Debug = view_as<bool>KvGetNum(hKV, "debug", 1);
-		bLog_Info = view_as<bool>KvGetNum(hKV, "info", 1);
-		bLog_Warn = view_as<bool>KvGetNum(hKV, "warn", 1);
-		bLog_Error = view_as<bool>KvGetNum(hKV, "error", 1);
+		bLog_Default = KvGetBool(hKV, "default", true);
+		bLog_Trace = KvGetBool(hKV, "trace", true);
+		bLog_Debug = KvGetBool(hKV, "debug", true);
+		bLog_Info = KvGetBool(hKV, "info", true);
+		bLog_Warn = KvGetBool(hKV, "warn", true);
+		bLog_Error = KvGetBool(hKV, "error", true);
 		
 		KvGoBack(hKV);
 	}
 	
-	bool bSubDirectories = view_as<bool>KvGetNum(hKV, "log_subfolders", 0);
+	bool bSubDirectories = KvGetBool(hKV, "log_subfolders", false);
 	
 	if (bSubDirectories && KvJumpToKey(hKV, "Logging_subfolders"))
 	{
-		bFolder_Default = view_as<bool>KvGetNum(hKV, "default", 0);
-		bFolder_Trace = view_as<bool>KvGetNum(hKV, "trace", 0);
-		bFolder_Debug = view_as<bool>KvGetNum(hKV, "debug", 0);
-		bFolder_Info = view_as<bool>KvGetNum(hKV, "info", 0);
-		bFolder_Warn = view_as<bool>KvGetNum(hKV, "warn", 0);
-		bFolder_Error = view_as<bool>KvGetNum(hKV, "error", 0);
+		bFolder_Default = KvGetBool(hKV, "default", false);
+		bFolder_Trace = KvGetBool(hKV, "trace", false);
+		bFolder_Debug = KvGetBool(hKV, "debug", false);
+		bFolder_Info = KvGetBool(hKV, "info", false);
+		bFolder_Warn = KvGetBool(hKV, "warn", false);
+		bFolder_Error = KvGetBool(hKV, "error", false);
 		
 		KvGoBack(hKV);
 	}

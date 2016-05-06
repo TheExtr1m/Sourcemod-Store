@@ -70,9 +70,9 @@ void LoadConfig()
 	Store_RegisterChatCommands(menuCommands, ChatCommand_OpenRefund);
 	
 	g_refundPricePercentage = KvGetFloat(kv, "refund_price_percentage", 0.5);
-	g_confirmItemRefund = view_as<bool>KvGetNum(kv, "confirm_item_refund", 1);
-	g_ShowMenuDescriptions = view_as<bool>KvGetNum(kv, "show_menu_descriptions", 1);
-	g_showMenuItemDescriptions = view_as<bool>KvGetNum(kv, "show_menu_item_descriptions", 1);
+	g_confirmItemRefund = KvGetBool(kv, "confirm_item_refund", true);
+	g_ShowMenuDescriptions = KvGetBool(kv, "show_menu_descriptions", true);
+	g_showMenuItemDescriptions = KvGetBool(kv, "show_menu_item_descriptions", true);
 
 	CloseHandle(kv);
 	
@@ -326,7 +326,7 @@ public int ConfirmationMenuSelectHandle(Handle menu, MenuAction action, int clie
 				char buffer[255];
 				Format(buffer, sizeof(buffer), "%T", sDisplay, client);
 				
-				return view_as<int>RedrawMenuItem(buffer);
+				return view_as<int>(RedrawMenuItem(buffer));
 			}
 		case MenuAction_Cancel: OpenRefundMenu(client);
 		case MenuAction_End: CloseHandle(menu);

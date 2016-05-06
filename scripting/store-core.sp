@@ -197,9 +197,9 @@ void LoadConfig()
 		KvGoBack(kv);
 	}
 	
-	g_hideChatCommands = view_as<bool>KvGetNum(kv, "hide_chat_commands", 0);
+	g_hideChatCommands = KvGetBool(kv, "hide_chat_commands", false);
 	g_firstConnectionCredits = KvGetNum(kv, "first_connection_credits");
-	g_hideMenuItemDescriptions = view_as<bool>KvGetNum(kv, "hide_menu_descriptions", 0);
+	g_hideMenuItemDescriptions = KvGetBool(kv, "hide_menu_descriptions", false);
 	g_serverID = KvGetNum(kv, "server_id", 0);
 	
 	if (KvGetString(kv, "updater_url", g_updaterURL, sizeof(g_updaterURL)))
@@ -314,12 +314,7 @@ public void OnCommandGetCredits(int credits, any client)
 
 public Action Command_DeveloperMode(int client, int args)
 {
-	switch (bDeveloperMode[client])
-	{
-		case true: bDeveloperMode[client] = false;
-		case false: bDeveloperMode[client] = true;
-	}
-	
+	bDeveloperMode[client] = !bDeveloperMode[client];
 	CPrintToChat(client, "%t%t", "Store Tag Colored", "Store Developer Toggled", bDeveloperMode[client] ? "ON" : "OFF");
 	
 	return Plugin_Handled;
@@ -559,7 +554,7 @@ public int Native_AddMainMenuItem(Handle plugin, int params)
 	char value[64];
 	GetNativeString(3, value, sizeof(value));
 
-	AddMainMenuItem(true, displayName, description, value, plugin, view_as<Store_MenuItemClickCallback>GetNativeFunction(4), GetNativeCell(5));
+	AddMainMenuItem(true, displayName, description, value, plugin, view_as<Store_MenuItemClickCallback>(GetNativeFunction(4)), GetNativeCell(5));
 }
 
 public int Native_AddMainMenuItemEx(Handle plugin, int params)
@@ -573,7 +568,7 @@ public int Native_AddMainMenuItemEx(Handle plugin, int params)
 	char value[64];
 	GetNativeString(3, value, sizeof(value));
 
-	AddMainMenuItem(false, displayName, description, value, plugin, view_as<Store_MenuItemClickCallback>GetNativeFunction(4), GetNativeCell(5));
+	AddMainMenuItem(false, displayName, description, value, plugin, view_as<Store_MenuItemClickCallback>(GetNativeFunction(4)), GetNativeCell(5));
 }
 
 public int Native_GetCurrencyName(Handle plugin, int params)
@@ -636,7 +631,7 @@ public int Native_RegisterChatCommands(Handle plugin, int params)
 	char command[32];
 	GetNativeString(1, command, sizeof(command));
 
-	return RegisterCommands(plugin, command, view_as<Store_ChatCommandCallback>GetNativeFunction(2));
+	return RegisterCommands(plugin, command, view_as<Store_ChatCommandCallback>(GetNativeFunction(2)));
 }
 
 public int Native_GetServerID(Handle plugin, int params)
