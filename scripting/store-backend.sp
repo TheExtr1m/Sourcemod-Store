@@ -1761,20 +1761,32 @@ public void SQLCall_ConnectToDatabase(Handle owner, Handle hndl, const char[] er
 		return;
 	}
 	
+	if (g_hSQL != null)
+	{
+		return;
+	}
+	
 	g_hSQL = hndl;
 	
-	SQL_TFastQuery(g_hSQL, sQuery_Table_Categories);
-	SQL_TFastQuery(g_hSQL, sQuery_Table_Items);
-	SQL_TFastQuery(g_hSQL, sQuery_Table_Loadouts);
-	SQL_TFastQuery(g_hSQL, sQuery_Table_Users);
-	SQL_TFastQuery(g_hSQL, sQuery_Table_Users_Items);
-	SQL_TFastQuery(g_hSQL, sQuery_Table_Users_Items_Loadouts);
-	SQL_TFastQuery(g_hSQL, sQuery_Table_Versions);
-	SQL_TFastQuery(g_hSQL, sQuery_Table_Servers_Items);
-	SQL_TFastQuery(g_hSQL, sQuery_Table_Servers_Categories);
+	Transaction hTrans = SQL_CreateTransaction();
 	
-	SQL_TFastQuery(g_hSQL, sQuery_Table_FillLoadouts);
+	SQL_AddQuery(hTrans, sQuery_Table_Categories);
+	SQL_AddQuery(hTrans, sQuery_Table_Items);
+	SQL_AddQuery(hTrans, sQuery_Table_Loadouts);
+	SQL_AddQuery(hTrans, sQuery_Table_Users);
+	SQL_AddQuery(hTrans, sQuery_Table_Users_Items);
+	SQL_AddQuery(hTrans, sQuery_Table_Users_Items_Loadouts);
+	SQL_AddQuery(hTrans, sQuery_Table_Versions);
+	SQL_AddQuery(hTrans, sQuery_Table_Servers_Items);
+	SQL_AddQuery(hTrans, sQuery_Table_Servers_Categories);
 	
+	SQL_AddQuery(hTrans, sQuery_Table_FillLoadouts);
+	
+	SQL_ExecuteTransaction(g_hSQL, hTrans, Transaction_OnTablesSuccess, Transaction_OnTablesFailure);
+}
+
+public void Transaction_OnTablesSuccess(Database db, any data, int numQueries, Handle[] results, any[] queryData)
+{
 	Store_RegisterPluginModule(PLUGIN_NAME, PLUGIN_DESCRIPTION, PLUGIN_VERSION_CONVAR, STORE_VERSION);
 	
 	Call_StartForward(g_dbInitializedForward);
@@ -1783,6 +1795,11 @@ public void SQLCall_ConnectToDatabase(Handle owner, Handle hndl, const char[] er
 	ReloadCacheStacks(-1);
 	
 	g_reconnectCounter = 1;
+}
+
+public void Transaction_OnTablesFailure(Database db, any data, int numQueries, const char[] error, int failIndex, any[] queryData)
+{
+	LogError("Error while executing table creation queries: [%i] - %s", failIndex, error);
 }
 
 //Command - Reloads all items in the database.
